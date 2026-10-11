@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Game Bắn Quái - Thử Thách Sa Mạc</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #050508;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 900px;
+            max-height: 500px;
+            border: 2px solid #00fff5;
+            box-shadow: 0 0 15px rgba(0, 255, 245, 0.4);
+            overflow: hidden;
+            background: #000;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* UI Laptop */
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 1px 1px 3px #000;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .weapon-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 14px;
+            background: #444;
+            color: #aaa;
+            border: 1px solid #666;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        .weapon-btn.unlocked {
+            background: #00fff5;
+            color: #000;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 255, 245, 0.8);
+        }
+        
+        /* Cụm điều khiển: Nút nhảy bên tay trái */
+        .controls {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .btn-group {
+            pointer-events: auto;
+        }
+        .btn {
+            width: 58px;
+            height: 58px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        .btn:active {
+            background: rgba(0, 255, 245, 0.6);
+            transform: scale(0.92);
+        }
+
+        /* UI Điện thoại */
+        @media screen and (max-width: 820px) {
+            .ui {
+                top: 18px;
+                left: 15px;
+                font-size: 12px;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.75);
+            }
+            .weapon-btn {
+                top: 18px;
+                right: 15px;
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+            .controls {
+                bottom: 22px;
+                left: 20px;
+            }
+            .btn {
+                width: 68px;
+                height: 68px;
+                font-size: 28px;
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+        }
+        .overlay-title {
+            font-size: 26px;
+            font-weight: bold;
+            color: #00fff5;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 245, 0.5);
+        }
+        .overlay-desc {
+            font-size: 14px;
+            color: #ddd;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            max-width: 480px;
+        }
+        .main-btn {
+            padding: 12px 28px;
+            font-size: 16px;
+            background: #00fff5;
+            color: #000;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(0, 255, 245, 0.6);
+        }
+        #game-over { display: none; }
+
+        #rotate-notice {
+            display: none;
+            z-index: 99;
+            background: #000;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            #rotate-notice {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="canvas"></canvas>
+    
+    <div class="ui">
+        <div>❤️ Mạng: <span id="hp" style="color: #ff4b5c;">100</span></div>
+        <div>🪙 Vàng/Điểm: <span id="score" style="color: #f9ed69;">0</span></div>
+        <div>🏆 Kỷ kỷ: <span id="high-score" style="color: #ff79c6;">0</span></div>
+        <div>🔫 Vũ khí: <span id="weapon-name" style="color: #00fff5;">Súng Thường</span></div>
+        <div>⏱️ Thời gian: <span id="time-state" style="color: #00fff5;">0s</span></div>
+        <div id="status-alert" style="color: #ff3300; font-size: 11px; display: none;">🔥 NGUY HẠI: DUNG NHAM (CHẠM LÀ CHẾT)!</div>
+    </div>
+
+    <button id="weapon-btn" class="weapon-btn" onclick="toggleWeapon()">🔒 Cần 1000đ để Đổi Súng</button>
+
+    <div class="controls">
+        <div class="btn-group">
+            <div class="btn" id="btn-jump">▲</div>
+        </div>
+    </div>
+
+    <div id="rotate-notice" class="overlay-screen">
+        <div style="font-size: 50px; margin-bottom: 15px;">🔄📱</div>
+        <div class="overlay-title">XOAY NGANG ĐIỆN THOẠI</div>
+        <div class="overlay-desc">Vui lòng xoay ngang màn hình điện thoại để bắt đầu chơi!</div>
+    </div>
+
+    <div id="start-screen" class="overlay-screen">
+        <div class="overlay-title">SẮM SÚNG BẮN QUÁI</div>
+        <div class="overlay-desc">
+            💻 <b>Laptop:</b> W/Space nhảy, Giữ chuột để bắn.<br>
+            📱 <b>Điện thoại:</b> Tay trái nhấn <b>▲ Nhảy</b>, Tay phải giữ màn hình để xả đạn.
+        </div>
+        <button class="main-btn" id="start-btn">BẮT ĐẦU CHƠI</button>
+    </div>
+
+    <div id="game-over" class="overlay-screen">
+        <div class="overlay-title" style="color: #ff4b5c;">GAME OVER</div>
+        <div class="overlay-desc" style="font-size: 16px; line-height: 1.8;">
+            Điểm lượt chơi này: <span id="final-score" style="color: #f9ed69; font-weight: bold;">0</span><br>
+            🏆 Kỷ kỷ cao nhất: <span id="final-high-score" style="color: #ff79c6; font-weight: bold;">0</span>
+            <div id="new-record-tag" style="color: #00fff5; font-weight: bold; display: none; margin-top: 5px;">🎉 LẬP KỶ LỤC MỚI! 🎉</div>
+        </div>
+        <button class="main-btn" id="restart-btn" style="background: #ff4b5c; color: #fff;">CHƠI LẠI</button>
+    </div>
+</div>
+
+<script>
+function getOrCreateDeviceId() {
+    let devId = localStorage.getItem('monster_game_device_id');
+    if (!devId) {
+        devId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem('monster_game_device_id', devId);
+    }
+    return devId;
+}
+
+const deviceId = getOrCreateDeviceId();
+const highScoreKey = `monster_game_highscore_${deviceId}`;
+
+let highScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
+document.getElementById('high-score').innerText = highScore;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = 800;
+canvas.height = 450;
+const GROUND_Y = 380;
+
+const keys = { left: false, right: false, jump: false };
+
+let isGameStarted = false;
+let isGameOver = false;
+let isMouseDown = false;
+let pointerPos = { x: 400, y: 200 };
+
+const NORMAL_WORLD_SPEED = 3.2; 
+const SLOW_WORLD_SPEED = 1.2;
+let currentWorldSpeed = NORMAL_WORLD_SPEED;
+
+let bgOffset = 0;
+let groundOffset = 0;
+let gameTimeTicks = 0;
+
+const player = {
+    x: 100,
+    y: GROUND_Y - 45,
+    width: 30,
+    height: 45,
+    vx: 0,
+    vy: 0,
+    speed: 3.8,
+    jumpPower: -11.5,
+    gravity: 0.55,
+    isGrounded: false,
+    hp: 100,
+    currentWeapon: 0,
+    shootCooldown: 0
+};
+
+const weapons = [
+    { name: "Súng Thường", speed: 11, color: "#f9ed69", radius: 4, damage: 1, cooldown: 10 },
+    { name: "Súng Plasma", speed: 15, color: "#00fff5", radius: 7, damage: 1, cooldown: 6 }
+];
+
+let bullets = [];
+let monsters = [];
+let birds = [];
+let coins = [];
+let platforms = [];
+let cactusList = [];
+let score = 0;
+
+let monsterSpawnTimer = 0;
+let birdSpawnTimer = 0;
+let cactusSpawnTimer = 0;
+let isWeaponUnlocked = false;
+
+let environmentState = "NORMAL"; // NORMAL, LAVA (30đ), DESERT (100đ)
+
+function bindTouchButton(id, key) {
+    const btn = document.getElementById(id);
+    const press = (e) => { e.preventDefault(); e.stopPropagation(); keys[key] = true; };
+    const release = (e) => { e.preventDefault(); e.stopPropagation(); keys[key] = false; };
+
+    btn.addEventListener('touchstart', press, { passive: false });
+    btn.addEventListener('touchend', release, { passive: false });
+    btn.addEventListener('mousedown', press);
+    btn.addEventListener('mouseup', release);
+}
+
+bindTouchButton('btn-jump', 'jump');
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+    if (e.code === 'KeyW' || e.code === 'Space' || e.code === 'ArrowUp') keys.jump = true;
+    if (e.code === 'KeyQ') toggleWeapon();
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+    if (e.code === 'KeyW' || e.code === 'Space' || e.code === 'ArrowUp') keys.jump = false;
+});
+
+function toggleWeapon() {
+    if (!isWeaponUnlocked) return;
+    player.currentWeapon = (player.currentWeapon + 1) % weapons.length;
+    document.getElementById('weapon-name').innerText = weapons[player.currentWeapon].name;
+}
+
+function getCanvasPointerPos(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+const container = document.getElementById('game-container');
+
+container.addEventListener('mousedown', (e) => {
+    if (!isGameStarted || isGameOver) return;
+    if (e.target.classList.contains('btn') || e.target.classList.contains('main-btn') || e.target.classList.contains('weapon-btn')) return;
+    isMouseDown = true;
+    pointerPos = getCanvasPointerPos(e.clientX, e.clientY);
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (isMouseDown) pointerPos = getCanvasPointerPos(e.clientX, e.clientY);
+});
+
+window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+container.addEventListener('touchstart', (e) => {
+    if (!isGameStarted || isGameOver) return;
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && (target.classList.contains('btn') || target.classList.contains('main-btn') || target.classList.contains('weapon-btn'))) return;
+    
+    isMouseDown = true;
+    pointerPos = getCanvasPointerPos(touch.clientX, touch.clientY);
+}, { passive: false });
+
+window.addEventListener('touchmove', (e) => {
+    if (isMouseDown && e.touches.length > 0) {
+        pointerPos = getCanvasPointerPos(e.touches[0].clientX, e.touches[0].clientY);
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) isMouseDown = false;
+});
+
+function autoShoot() {
+    if (isGameOver || !isMouseDown || player.shootCooldown > 0) return;
+
+    const startX = player.x + player.width / 2;
+    const startY = player.y + player.height / 2;
+
+    const angle = Math.atan2(pointerPos.y - startY, pointerPos.x - startX);
+    const w = weapons[player.currentWeapon];
+
+    bullets.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(angle) * w.speed,
+        vy: Math.sin(angle) * w.speed,
+        radius: w.radius,
+        color: w.color,
+        damage: w.damage
+    });
+
+    player.shootCooldown = w.cooldown;
+}
+
+function addScore(amount) {
+    score += amount;
+    document.getElementById('score').innerText = score;
+
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem(highScoreKey, highScore);
+        document.getElementById('high-score').innerText = highScore;
+    }
+
+    const alertBox = document.getElementById('status-alert');
+
+    if (score >= 100) {
+        if (environmentState !== "DESERT") {
+            environmentState = "DESERT";
+            alertBox.style.display = 'block';
+            alertBox.style.color = '#f1c40f';
+            alertBox.innerText = '🌵 CẢNH BÁO: SA MẠC! Tránh xa Xương Rồng (Chạm là CHẾT)!';
+        }
+    } else if (score >= 30) {
+        if (environmentState !== "LAVA") {
+            environmentState = "LAVA";
+            alertBox.style.display = 'block';
+            alertBox.style.color = '#ff3300';
+            alertBox.innerText = '🔥 NGUY HẠI: DUNG NHAM (CHẠM LÀ CHẾT)!';
+        }
+    }
+
+    if (score >= 1000 && !isWeaponUnlocked) {
+        isWeaponUnlocked = true;
+        const wBtn = document.getElementById('weapon-btn');
+        wBtn.classList.add('unlocked');
+        wBtn.innerText = "Đổi Súng (Q)";
+    } else if (!isWeaponUnlocked) {
+        document.getElementById('weapon-btn').innerText = `🔒 Còn ${1000 - score}đ để Đổi Súng`;
+    }
+}
+
+function spawnPlatformChain() {
+    let lastPlatform = platforms[platforms.length - 1];
+    let lastX = lastPlatform ? (lastPlatform.x + lastPlatform.width) : canvas.width;
+    
+    let gap = Math.random() * 25 + 15; 
+    let nextX = Math.max(canvas.width + 10, lastX + gap);
+
+    let lastY = lastPlatform ? lastPlatform.y : (GROUND_Y - 60);
+    
+    let heightDiff = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 35 + 10);
+    let nextY = lastY + heightDiff;
+
+    if (nextY < GROUND_Y - 140) nextY = GROUND_Y - 140;
+    if (nextY > GROUND_Y - 50) nextY = GROUND_Y - 50;
+
+    const pWidth = Math.random() * 30 + 120;
+    const newPlatform = { x: nextX, y: nextY, width: pWidth, height: 16 };
+    platforms.push(newPlatform);
+
+    const coinCount = Math.floor(pWidth / 35);
+    for (let i = 0; i < coinCount; i++) {
+        coins.push({
+            x: nextX + 20 + i * 35,
+            y: nextY - 18,
+            radius: 7
+        });
+    }
+}
+
+function spawnCactus() {
+    cactusList.push({
+        x: canvas.width + 20,
+        y: GROUND_Y - 35,
+        width: 22,
+        height: 35
+    });
+}
+
+function spawnBird() {
+    birds.push({
+        x: canvas.width + 30,
+        y: Math.random() * 100 + 80,
+        width: 32,
+        height: 24,
+        speed: Math.random() * 0.8 + 1.2,
+        wingFlap: 0
+    });
+}
+
+function spawnMonstersFromRight() {
+    const count = Math.floor(Math.random() * 2) + 1;
+    for (let i = 0; i < count; i++) {
+        const isBig = Math.random() < 0.35;
+        const offsetX = i * 45;
+        if (isBig) {
+            monsters.push({
+                x: canvas.width + 20 + offsetX, y: GROUND_Y - 45,
+                width: 40, height: 45, baseSpeed: Math.random() * 0.5 + 0.3,
+                maxHp: 3, hp: 3, color: '#8a2be2', type: 'big'
+            });
+        } else {
+            monsters.push({
+                x: canvas.width + 20 + offsetX, y: GROUND_Y - 30,
+                width: 25, height: 30, baseSpeed: Math.random() * 0.8 + 0.6,
+                maxHp: 1, hp: 1, color: '#00ff66', type: 'small'
+            });
+        }
+    }
+}
+
+function update() {
+    if (!isGameStarted || isGameOver) return;
+
+    gameTimeTicks++;
+    const elapsedSeconds = Math.floor(gameTimeTicks / 60);
+    document.getElementById('time-state').innerText = `${elapsedSeconds}s`;
+
+    let isBlockedByPlatform = false;
+
+    if (player.shootCooldown > 0) player.shootCooldown--;
+    autoShoot();
+
+    if (keys.left) player.vx = -player.speed;
+    else if (keys.right) player.vx = player.speed;
+    else player.vx = 0;
+
+    if (keys.jump && player.isGrounded) {
+        player.vy = player.jumpPower;
+        player.isGrounded = false;
+    }
+
+    player.vy += player.gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    if (player.y + player.height >= GROUND_Y) {
+        player.y = GROUND_Y - player.height;
+        player.vy = 0;
+        player.isGrounded = true;
+
+        if (environmentState === "LAVA") {
+            player.hp = 0;
+            document.getElementById('hp').innerText = 0;
+            endGame();
+            return;
+        }
+    }
+
+    platforms.forEach(p => {
+        if (player.x + player.width > p.x && player.x < p.x + p.width &&
+            player.y + player.height >= p.y && player.y + player.height <= p.y + 14 && player.vy >= 0) {
+            player.y = p.y - player.height;
+            player.vy = 0;
+            player.isGrounded = true;
+        }
+
+        if (player.x + player.width >= p.x && player.x < p.x &&
+            player.y + player.height > p.y + 5 && player.y < p.y + p.height) {
+            isBlockedByPlatform = true;
+            player.x = p.x - player.width;
+        }
+    });
+
+    currentWorldSpeed = isBlockedByPlatform ? SLOW_WORLD_SPEED : NORMAL_WORLD_SPEED;
+
+    bgOffset = (bgOffset + currentWorldSpeed * 0.3) % canvas.width;
+    groundOffset = (groundOffset + currentWorldSpeed) % 40;
+
+    if (player.x < 30) player.x = 30;
+    if (player.x > 300) player.x = 300;
+
+    let rightmostX = platforms.length > 0 ? (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width) : 0;
+    if (rightmostX < canvas.width + 100) {
+        spawnPlatformChain();
+    }
+
+    for (let i = platforms.length - 1; i >= 0; i--) {
+        let p = platforms[i];
+        p.x -= currentWorldSpeed;
+        if (p.x + p.width < -50) platforms.splice(i, 1);
+    }
+
+    if (environmentState === "DESERT") {
+        cactusSpawnTimer++;
+        if (cactusSpawnTimer > 160) {
+            cactusSpawnTimer = 0;
+            spawnCactus();
+        }
+
+        for (let i = cactusList.length - 1; i >= 0; i--) {
+            let cac = cactusList[i];
+            cac.x -= currentWorldSpeed;
+
+            if (player.x < cac.x + cac.width && player.x + player.width > cac.x &&
+                player.y < cac.y + cac.height && player.y + player.height > cac.y) {
+                player.hp = 0;
+                document.getElementById('hp').innerText = 0;
+                endGame();
+                return;
+            }
+
+            if (cac.x + cac.width < -50) cactusList.splice(i, 1);
+        }
+    }
+
+    for (let i = coins.length - 1; i >= 0; i--) {
+        let c = coins[i];
+        c.x -= currentWorldSpeed;
+        const dist = Math.hypot((player.x + player.width / 2) - c.x, (player.y + player.height / 2) - c.y);
+        if (dist < c.radius + player.width / 2) {
+            coins.splice(i, 1);
+            addScore(1);
+            continue;
+        }
+        if (c.x < -20) coins.splice(i, 1);
+    }
+
+    birdSpawnTimer++;
+    if (birdSpawnTimer > 180) { birdSpawnTimer = 0; spawnBird(); }
+    for (let i = birds.length - 1; i >= 0; i--) {
+        let bird = birds[i];
+        bird.x -= (currentWorldSpeed + bird.speed);
+        bird.wingFlap += 0.2;
+
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            let b = bullets[j];
+            if (b.x > bird.x && b.x < bird.x + bird.width && b.y > bird.y && b.y < bird.y + bird.height) {
+                bullets.splice(j, 1);
+                birds.splice(i, 1);
+                addScore(10);
+                break;
+            }
+        }
+
+        if (player.x < bird.x + bird.width && player.x + player.width > bird.x &&
+            player.y < bird.y + bird.height && player.y + player.height > bird.y) {
+            player.hp = 0;
+            document.getElementById('hp').innerText = 0;
+            endGame();
+            return;
+        }
+
+        if (bird.x + bird.width < -50) birds.splice(i, 1);
+    }
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+            bullets.splice(i, 1);
+        }
+    }
+
+    monsterSpawnTimer++;
+    if (monsterSpawnTimer > 100) { monsterSpawnTimer = 0; spawnMonstersFromRight(); }
+
+    for (let i = monsters.length - 1; i >= 0; i--) {
+        let m = monsters[i];
+        m.x -= (currentWorldSpeed + m.baseSpeed);
+
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            let b = bullets[j];
+            if (b.x > m.x && b.x < m.x + m.width && b.y > m.y && b.y < m.y + m.height) {
+                m.hp -= b.damage;
+                bullets.splice(j, 1);
+                if (m.hp <= 0) {
+                    addScore(m.type === 'big' ? 3 : 1);
+                    monsters.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        if (player.x < m.x + m.width && player.x + player.width > m.x &&
+            player.y < m.y + m.height && player.y + player.height > m.y) {
+            player.hp -= (m.type === 'big') ? 25 : 15;
+            document.getElementById('hp').innerText = Math.max(0, Math.ceil(player.hp));
+            monsters.splice(i, 1);
+            if (player.hp <= 0) endGame();
+        }
+
+        if (m.x + m.width < -50) monsters.splice(i, 1);
+    }
+}
+
+function lerpColor(c1, c2, f) {
+    let r = Math.round(c1[0] + f * (c2[0] - c1[0]));
+    let g = Math.round(c1[1] + f * (c2[1] - c1[1]));
+    let b = Math.round(c1[2] + f * (c2[2] - c1[2]));
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function drawBackground() {
+    const cycleLength = 4800; 
+    const timeProgress = (gameTimeTicks % cycleLength) / cycleLength;
+
+    let skyTop, skyBottom, cloudColor;
+
+    const colorMorning = { top: [135, 206, 235], bottom: [255, 222, 173], cloud: [255, 255, 255] };
+    const colorNoon = { top: [30, 144, 255], bottom: [135, 206, 250], cloud: [255, 255, 255] };
+    const colorSunset = { top: [255, 94, 98], bottom: [255, 153, 102], cloud: [255, 180, 150] };
+    const colorNight = { top: [15, 23, 42], bottom: [30, 41, 59], cloud: [51, 65, 85] };
+
+    if (timeProgress < 0.25) {
+        let f = timeProgress / 0.25;
+        skyTop = lerpColor(colorMorning.top, colorNoon.top, f);
+        skyBottom = lerpColor(colorMorning.bottom, colorNoon.bottom, f);
+        cloudColor = lerpColor(colorMorning.cloud, colorNoon.cloud, f);
+    } else if (timeProgress < 0.5) {
+        let f = (timeProgress - 0.25) / 0.25;
+        skyTop = lerpColor(colorNoon.top, colorSunset.top, f);
+        skyBottom = lerpColor(colorNoon.bottom, colorSunset.bottom, f);
+        cloudColor = lerpColor(colorNoon.cloud, colorSunset.cloud, f);
+    } else if (timeProgress < 0.75) {
+        let f = (timeProgress - 0.5) / 0.25;
+        skyTop = lerpColor(colorSunset.top, colorNight.top, f);
+        skyBottom = lerpColor(colorSunset.bottom, colorNight.bottom, f);
+        cloudColor = lerpColor(colorSunset.cloud, colorNight.cloud, f);
+    } else {
+        let f = (timeProgress - 0.75) / 0.25;
+        skyTop = lerpColor(colorNight.top, colorMorning.top, f);
+        skyBottom = lerpColor(colorNight.bottom, colorMorning.bottom, f);
+        cloudColor = lerpColor(colorNight.cloud, colorMorning.cloud, f);
+    }
+
+    let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, skyTop);
+    gradient.addColorStop(1, skyBottom);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (timeProgress >= 0.65 && timeProgress <= 0.85) {
+        ctx.fillStyle = '#f1f2f6';
+        ctx.beginPath();
+        ctx.arc(680, 80, 25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = cloudColor;
+    for (let i = -1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(i * 300 - bgOffset + 150, 260, 100, 0, Math.PI * 2);
+        ctx.arc(i * 300 - bgOffset + 250, 280, 80, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (environmentState === "DESERT") {
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#e67e22';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+    } else if (environmentState === "LAVA") {
+        const lavaGlow = Math.sin(Date.now() / 150) * 0.2 + 0.8;
+        ctx.fillStyle = `rgba(235, 47, 6, ${lavaGlow})`;
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#ff9f1a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#00fff5';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = environmentState === "DESERT" ? '#d35400' : (environmentState === "LAVA" ? '#ff3300' : '#334155');
+    for (let x = -groundOffset; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, GROUND_Y);
+        ctx.lineTo(x - 20, canvas.height);
+        ctx.stroke();
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+
+    platforms.forEach(p => {
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+    });
+
+    cactusList.forEach(cac => {
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(cac.x + 7, cac.y, 8, cac.height);
+        ctx.fillRect(cac.x, cac.y + 10, 7, 5);
+        ctx.fillRect(cac.x, cac.y + 5, 4, 10);
+        ctx.fillRect(cac.x + 15, cac.y + 14, 7, 5);
+        ctx.fillRect(cac.x + 18, cac.y + 8, 4, 10);
+    });
+
+    coins.forEach(c => {
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+
+    birds.forEach(bird => {
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(bird.x + 4, bird.y + 4, 4, 4);
+
+        const flapOffset = Math.sin(bird.wingFlap) * 6;
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 10, bird.y + 12);
+        ctx.lineTo(bird.x + 20, bird.y - 6 + flapOffset);
+        ctx.lineTo(bird.x + 25, bird.y + 12);
+        ctx.fill();
+    });
+
+    const runBounce = (player.isGrounded && isGameStarted) ? Math.sin(Date.now() / 90) * 2 : 0;
+    ctx.fillStyle = '#00fff5';
+    ctx.fillRect(player.x, player.y + runBounce, player.width, player.height - runBounce);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(player.x + 18, player.y + 8 + runBounce, 6, 6);
+
+    bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    monsters.forEach(m => {
+        ctx.fillStyle = m.color;
+        ctx.fillRect(m.x, m.y, m.width, m.height);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(m.x + 4, m.y + 6, 5, 5);
+        ctx.fillRect(m.x + m.width - 9, m.y + 6, 5, 5);
+
+        const barWidth = m.width;
+        const barHeight = 5;
+        const barX = m.x;
+        const barY = m.y - 10;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const hpPercent = m.hp / m.maxHp;
+        ctx.fillStyle = hpPercent > 0.5 ? '#00ff66' : '#ff4b5c';
+        ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+    });
+}
+
+function loop() {
+    update();
+    draw();
+    if (!isGameOver) requestAnimationFrame(loop);
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', restartGame);
+
+function startGame() {
+    isGameStarted = true;
+    document.getElementById('start-screen').style.display = 'none';
+    
+    platforms = [];
+    coins = [];
+    cactusList = [];
+    gameTimeTicks = 0;
+    while (platforms.length < 6) {
+        spawnPlatformChain();
+    }
+}
+
+function endGame() {
+    isGameOver = true;
+    isMouseDown = false;
+
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('final-high-score').innerText = highScore;
+
+    const recordTag = document.getElementById('new-record-tag');
+    if (score >= highScore && score > 0) {
+        recordTag.style.display = 'block';
+    } else {
+        recordTag.style.display = 'none';
+    }
+
+    document.getElementById('game-over').style.display = 'flex';
+}
+
+function restartGame() {
+    player.hp = 100;
+    player.x = 100;
+    player.y = GROUND_Y - 45;
+    player.vx = 0;
+    player.vy = 0;
+    player.currentWeapon = 0;
+
+    bullets = [];
+    monsters = [];
+    birds = [];
+    coins = [];
+    platforms = [];
+    cactusList = [];
+    score = 0;
+    gameTimeTicks = 0;
+    isGameOver = false;
+    isMouseDown = false;
+    isWeaponUnlocked = false;
+    environmentState = "NORMAL";
+
+    const wBtn = document.getElementById('weapon-btn');
+    wBtn.classList.remove('unlocked');
+    wBtn.innerText = "🔒 Cần 1000đ để Đổi Súng";
+
+    document.getElementById('status-alert').style.display = 'none';
+    document.getElementById('hp').innerText = player.hp;
+    document.getElementById('score').innerText = score;
+    document.getElementById('time-state').innerText = '0s';
+    document.getElementById('weapon-name').innerText = weapons[0].name;
+    document.getElementById('game-over').style.display = 'none';
+    
+    startGame();
+    loop();
+}
+
+loop();
+</script>
+
+</body>
+</html>
