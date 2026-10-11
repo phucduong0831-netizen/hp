@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>PngxĐVTH</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #050508;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 900px;
+            max-height: 500px;
+            border: 2px solid #00fff5;
+            box-shadow: 0 0 15px rgba(0, 255, 245, 0.4);
+            overflow: hidden;
+            background: #000;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* UI Laptop */
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 1px 1px 3px #000;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .weapon-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 14px;
+            background: #444;
+            color: #aaa;
+            border: 1px solid #666;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        .weapon-btn.unlocked {
+            background: #a55eea;
+            color: #fff;
+            border: none;
+            box-shadow: 0 0 12px rgba(165, 94, 234, 0.8);
+        }
+        
+        /* Cụm điều khiển: Nút nhảy bên tay trái */
+        .controls {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .btn-group {
+            pointer-events: auto;
+        }
+        .btn {
+            width: 58px;
+            height: 58px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        .btn:active {
+            background: rgba(0, 255, 245, 0.6);
+            transform: scale(0.92);
+        }
+
+        /* UI Điện thoại */
+        @media screen and (max-width: 820px) {
+            .ui {
+                top: 18px;
+                left: 15px;
+                font-size: 12px;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.75);
+            }
+            .weapon-btn {
+                top: 18px;
+                right: 15px;
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+            .controls {
+                bottom: 22px;
+                left: 20px;
+            }
+            .btn {
+                width: 68px;
+                height: 68px;
+                font-size: 28px;
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+        }
+        .overlay-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00fff5;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 245, 0.5);
+        }
+        .overlay-desc {
+            font-size: 14px;
+            color: #ddd;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            max-width: 480px;
+        }
+
+        @keyframes pulseHeartbeat {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+            }
+            15% {
+                transform: scale(1.12);
+                box-shadow: 0 0 22px rgba(255, 71, 87, 0.9);
+            }
+            30% {
+                transform: scale(1);
+                box-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+            }
+            45% {
+                transform: scale(1.08);
+                box-shadow: 0 0 18px rgba(255, 71, 87, 0.8);
+            }
+            60% {
+                transform: scale(0.96);
+                box-shadow: 0 0 8px rgba(255, 71, 87, 0.4);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+            }
+        }
+
+        .pink-start-btn {
+            padding: 14px 36px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #ff6b81, #ff4757);
+            color: #ffffff;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+            animation: pulseHeartbeat 1.2s infinite ease-in-out;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+        .pink-start-btn:hover {
+            animation-duration: 0.6s;
+        }
+        .pink-start-btn:active {
+            transform: scale(0.95);
+        }
+
+        .main-btn {
+            padding: 12px 28px;
+            font-size: 16px;
+            background: #00fff5;
+            color: #000;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(0, 255, 245, 0.6);
+        }
+        #game-over { display: none; }
+
+        #rotate-notice {
+            display: none;
+            z-index: 99;
+            background: #000;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            #rotate-notice {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="canvas"></canvas>
+
+    <!-- Nhạc nền do người chơi tự chọn (ví dụ: file Người Dưng đã có trên máy) -->
+    <input id="bgm-file" type="file" accept="audio/*"
+           style="position:absolute; left:10px; bottom:10px; z-index:30;
+                  max-width:230px; color:white; background:rgba(0,0,0,.7);
+                  border:1px solid #00fff5; border-radius:8px; padding:6px;">
+    <audio id="bgm-audio" loop preload="auto"></audio>
+    
+    <div class="ui">
+        <div>❤️ Máu: <span id="hp" style="color: #ff4b5c;">100</span></div>
+        <div>🪙 Vàng/Điểm: <span id="score" style="color: #f9ed69;">0</span></div>
+        <div>🏆 Kỷ lục: <span id="high-score" style="color: #ff79c6;">0</span></div>
+        <div>🔫 Vũ khí: <span id="weapon-name" style="color: #a55eea;">Súng Thường</span></div>
+        <div>⏱️ Thời gian: <span id="time-state" style="color: #00fff5;">0s</span></div>
+        <div id="hazard-alert" style="color: #ff3300; font-size: 11px; display: none;">🔥 NGUY HẠI: DUNG NHAM (CHẠM LÀ CHẾT)!</div>
+    </div>
+
+    <button id="weapon-btn" class="weapon-btn" onclick="toggleWeapon()">🔒 Cần 1000đ để Đổi Súng</button>
+
+    <div class="controls">
+        <div class="btn-group">
+            <div class="btn" id="btn-jump">▲</div>
+        </div>
+    </div>
+
+    <div id="rotate-notice" class="overlay-screen">
+        <div style="font-size: 50px; margin-bottom: 15px;">🔄📱</div>
+        <div class="overlay-title">XOAY NGANG ĐIỆN THOẠI</div>
+        <div class="overlay-desc">Vui lòng xoay ngang màn hình điện thoại để bắt đầu chơi!</div>
+    </div>
+
+    <div id="start-screen" class="overlay-screen">
+        <div class="overlay-title">PngxĐVTH</div>
+        <div class="overlay-desc">
+            💻 <b>Laptop:</b> W/Space/A/D di chuyển, Nhấn W/Space để nhảy, Giữ chuột bắn.<br>
+            📱 <b>Điện thoại:</b> Nhấn nút <b>▲ Nhảy</b>, Tay phải giữ màn hình để xả đạn.<br>🎵 Chọn file nhạc ở góc dưới để dùng làm nhạc nền.
+        </div>
+        <button class="pink-start-btn" id="start-btn">BẮT ĐẦU</button>
+    </div>
+
+    <div id="game-over" class="overlay-screen">
+        <div class="overlay-title" style="color: #ff4b5c;">GAME OVER</div>
+        <div class="overlay-desc" style="font-size: 16px; line-height: 1.8;">
+            Điểm lượt chơi này: <span id="final-score" style="color: #f9ed69; font-weight: bold;">0</span><br>
+            🏆 Kỷ lục cao nhất: <span id="final-high-score" style="color: #ff79c6; font-weight: bold;">0</span>
+            <div id="new-record-tag" style="color: #00fff5; font-weight: bold; display: none; margin-top: 5px;">🎉 LẬP KỶ LỤC MỚI! 🎉</div>
+        </div>
+        <button class="main-btn" id="restart-btn" style="background: #ff4b5c; color: #fff;">CHƠI LẠI</button>
+    </div>
+</div>
+
+<script>
+// --- HỆ THỐNG ÂM THANH & NHẠC NỀN ---
+let audioCtx = null;
+let bgmObjectURL = null;
+const bgmAudio = document.getElementById('bgm-audio');
+const bgmFile = document.getElementById('bgm-file');
+
+bgmFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (bgmObjectURL) URL.revokeObjectURL(bgmObjectURL);
+    bgmObjectURL = URL.createObjectURL(file);
+    bgmAudio.src = bgmObjectURL;
+    bgmAudio.volume = 0.35;
+
+    // Nếu game đang chạy thì phát ngay; nếu chưa thì sẽ phát khi bấm BẮT ĐẦU.
+    if (isGameStarted && !isGameOver) {
+        bgmAudio.play().catch(() => {});
+    }
+});
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    startBGM();
+}
+
+function startBGM() {
+    if (!bgmAudio.src) return; // Chưa chọn file nhạc
+    bgmAudio.volume = 0.35;
+    bgmAudio.play().catch(() => {});
+}
+
+function stopBGM() {
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+}
+
+function playShootSound() {
+    if (!audioCtx) return;
+    try {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(580, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.08);
+
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+    } catch (e) {}
+}
+
+function playJumpSound() {
+    if (!audioCtx) return;
+    try {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.12);
+
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+    } catch (e) {}
+}
+
+function playDamageSound() {
+    if (!audioCtx) return;
+    try {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+    } catch (e) {}
+}
+
+function playHealSound() {
+    if (!audioCtx) return;
+    try {
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((freq, index) => {
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + index * 0.06);
+
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime + index * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + index * 0.06 + 0.12);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(audioCtx.currentTime + index * 0.06);
+            osc.stop(audioCtx.currentTime + index * 0.06 + 0.12);
+        });
+    } catch (e) {}
+}
+
+const lavaBgImage = new Image();
+lavaBgImage.src = 'https://images.unsplash.com/photo-1508873696983-2df5c920ac1c?q=80&w=1000&auto=format&fit=crop';
+let isLavaBgLoaded = false;
+lavaBgImage.onload = () => { isLavaBgLoaded = true; };
+
+function getOrCreateDeviceId() {
+    let devId = localStorage.getItem('pngxdvth_device_id');
+    if (!devId) {
+        devId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem('pngxdvth_device_id', devId);
+    }
+    return devId;
+}
+
+const deviceId = getOrCreateDeviceId();
+const highScoreKey = `pngxdvth_highscore_${deviceId}`;
+
+let highScore = parseInt(localStorage.getItem(highScoreKey)) || 0;
+document.getElementById('high-score').innerText = highScore;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = 800;
+canvas.height = 450;
+const GROUND_Y = 380;
+
+let jumpRequested = false; // Xử lý thao tác nhấn nhảy thủ công
+
+let isGameStarted = false;
+let isGameOver = false;
+let isMouseDown = false;
+let pointerPos = { x: 400, y: 200 };
+
+let shakeTimer = 0;
+let shakeMagnitude = 0;
+
+function triggerScreenShake(magnitude = 12, duration = 18) {
+    shakeMagnitude = magnitude;
+    shakeTimer = duration;
+}
+
+const NORMAL_WORLD_SPEED = 3.2; 
+const SLOW_WORLD_SPEED = 1.2;
+let currentWorldSpeed = NORMAL_WORLD_SPEED;
+
+let bgOffset = 0;
+let groundOffset = 0;
+let gameTimeTicks = 0;
+
+const player = {
+    x: 100,
+    y: GROUND_Y - 48,
+    width: 34,
+    height: 48,
+    vx: 0,
+    vy: 0,
+    speed: 3.8,
+    jumpPower: -11.5,
+    gravity: 0.55,
+    isGrounded: false,
+    maxHp: 100,
+    hp: 100,
+    currentWeapon: 0,
+    shootCooldown: 0
+};
+
+const weapons = [
+    { name: "Súng Thường", speed: 11, color: "#a55eea", radius: 5, damage: 1, cooldown: 10, type: 'single' },
+    { name: "Súng 5 Tia Tím Siêu Mạnh", speed: 14, color: "#9b59b6", radius: 7, damage: 1, cooldown: 8, type: 'multishot' }
+];
+
+let bullets = [];
+let monsters = [];
+let birds = [];
+let coins = [];
+let medkits = [];
+let platforms = [];
+let hazards = [];
+let hitParticles = [];
+let score = 0;
+
+let monsterSpawnTimer = 0;
+let birdSpawnTimer = 0;
+let hazardSpawnTimer = 0;
+let medkitSpawnTimer = 0;
+
+let isWeaponUnlocked = false;
+let environmentMode = 'normal';
+
+function createHitParticles(x, y) {
+    for (let i = 0; i < 6; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 2;
+        hitParticles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: Math.random() * 2.5 + 1.5,
+            color: Math.random() < 0.5 ? '#a55eea' : '#ffffff',
+            life: 15
+        });
+    }
+}
+
+// Bắt sự kiện nhấn nút nhảy (chỉ nhảy khi người dùng thực sự tương tác)
+const jumpBtn = document.getElementById('btn-jump');
+const triggerJump = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (player.isGrounded && isGameStarted && !isGameOver) {
+        player.vy = player.jumpPower;
+        player.isGrounded = false;
+        playJumpSound();
+    }
+};
+
+jumpBtn.addEventListener('touchstart', triggerJump, { passive: false });
+jumpBtn.addEventListener('mousedown', triggerJump);
+
+window.addEventListener('keydown', (e) => {
+    if ((e.code === 'KeyW' || e.code === 'Space' || e.code === 'ArrowUp')) {
+        e.preventDefault();
+        if (player.isGrounded && isGameStarted && !isGameOver) {
+            player.vy = player.jumpPower;
+            player.isGrounded = false;
+            playJumpSound();
+        }
+    }
+    if (e.code === 'KeyQ') toggleWeapon();
+});
+
+function toggleWeapon() {
+    if (!isWeaponUnlocked) return;
+    player.currentWeapon = (player.currentWeapon + 1) % weapons.length;
+    document.getElementById('weapon-name').innerText = weapons[player.currentWeapon].name;
+}
+
+function getCanvasPointerPos(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+const container = document.getElementById('game-container');
+
+container.addEventListener('mousedown', (e) => {
+    if (!isGameStarted || isGameOver) return;
+    if (e.target.classList.contains('pink-start-btn') || e.target.classList.contains('btn') || e.target.classList.contains('main-btn') || e.target.classList.contains('weapon-btn') || e.target.id === 'bgm-file') return;
+    isMouseDown = true;
+    pointerPos = getCanvasPointerPos(e.clientX, e.clientY);
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (isMouseDown) pointerPos = getCanvasPointerPos(e.clientX, e.clientY);
+});
+
+window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+container.addEventListener('touchstart', (e) => {
+    if (!isGameStarted || isGameOver) return;
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && (target.classList.contains('pink-start-btn') || target.classList.contains('btn') || target.classList.contains('main-btn') || target.classList.contains('weapon-btn') || target.id === 'bgm-file')) return;
+    
+    isMouseDown = true;
+    pointerPos = getCanvasPointerPos(touch.clientX, touch.clientY);
+}, { passive: false });
+
+window.addEventListener('touchmove', (e) => {
+    if (isMouseDown && e.touches.length > 0) {
+        pointerPos = getCanvasPointerPos(e.touches[0].clientX, e.touches[0].clientY);
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) isMouseDown = false;
+});
+
+function autoShoot() {
+    if (isGameOver || !isMouseDown || player.shootCooldown > 0) return;
+
+    const startX = player.x + player.width / 2;
+    const startY = player.y + player.height / 2;
+
+    const baseAngle = Math.atan2(pointerPos.y - startY, pointerPos.x - startX);
+    const w = weapons[player.currentWeapon];
+
+    playShootSound();
+
+    if (w.type === 'multishot') {
+        const spreadAngles = [-0.3, -0.15, 0, 0.15, 0.3];
+        spreadAngles.forEach(offset => {
+            let angle = baseAngle + offset;
+            bullets.push({
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * w.speed,
+                vy: Math.sin(angle) * w.speed,
+                radius: w.radius,
+                color: w.color,
+                damage: w.damage
+            });
+        });
+    } else {
+        bullets.push({
+            x: startX,
+            y: startY,
+            vx: Math.cos(baseAngle) * w.speed,
+            vy: Math.sin(baseAngle) * w.speed,
+            radius: w.radius,
+            color: w.color,
+            damage: w.damage
+        });
+    }
+
+    player.shootCooldown = w.cooldown;
+}
+
+function addScore(amount) {
+    score += amount;
+    document.getElementById('score').innerText = score;
+
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem(highScoreKey, highScore);
+        document.getElementById('high-score').innerText = highScore;
+    }
+
+    const hazardAlert = document.getElementById('hazard-alert');
+
+    if (score >= 300) {
+        if (environmentMode !== 'ice') {
+            environmentMode = 'ice';
+            hazardAlert.style.display = 'block';
+            hazardAlert.style.color = '#00d2d3';
+            hazardAlert.innerText = '❄️ MAP BĂNG: NÉ GAI BĂNG NHỌN (BỊ TRỪ 20HP)!';
+            hazards = [];
+        }
+    } else if (score >= 100) {
+        if (environmentMode !== 'desert') {
+            environmentMode = 'desert';
+            hazardAlert.style.display = 'block';
+            hazardAlert.style.color = '#e67e22';
+            hazardAlert.innerText = '🏜️ SA MẠC CÁT: NÉ XƯƠNG RỒNG (BỊ TRỪ 20HP)!';
+            
+            if (platforms.length > 1) {
+                platforms = platforms.slice(-1);
+            }
+        }
+    } else if (score >= 30) {
+        if (environmentMode !== 'lava') {
+            environmentMode = 'lava';
+            hazardAlert.style.display = 'block';
+            hazardAlert.style.color = '#ff3300';
+            hazardAlert.innerText = '🔥 NGUY HẠI: DUNG NHAM (CHẠM LÀ CHẾT)!';
+        }
+    }
+
+    if (score >= 1000 && !isWeaponUnlocked) {
+        isWeaponUnlocked = true;
+        player.currentWeapon = 1;
+        document.getElementById('weapon-name').innerText = weapons[1].name;
+        const wBtn = document.getElementById('weapon-btn');
+        wBtn.classList.add('unlocked');
+        wBtn.innerText = "Đổi Súng (Q)";
+    } else if (!isWeaponUnlocked) {
+        document.getElementById('weapon-btn').innerText = `🔒 Còn ${1000 - score}đ để Mở Súng 5 Tia`;
+    }
+}
+
+function spawnPlatformChain(initialX = null) {
+    let lastPlatform = platforms[platforms.length - 1];
+    let lastX = lastPlatform ? (lastPlatform.x + lastPlatform.width) : (initialX !== null ? initialX : canvas.width);
+    
+    let gap = (environmentMode === 'desert') ? (Math.random() * 200 + 180) : (Math.random() * 15 + 10); 
+    let nextX = initialX !== null ? initialX : Math.max(canvas.width + 10, lastX + gap);
+
+    let lastY = lastPlatform ? lastPlatform.y : (GROUND_Y - 60);
+    
+    let heightDiff = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 25 + 5);
+    let nextY = lastY + heightDiff;
+
+    if (nextY < GROUND_Y - 130) nextY = GROUND_Y - 130;
+    if (nextY > GROUND_Y - 50) nextY = GROUND_Y - 50;
+
+    const pWidth = Math.random() * 40 + 120;
+    const newPlatform = { x: nextX, y: nextY, width: pWidth, height: 16 };
+    platforms.push(newPlatform);
+
+    const coinCount = Math.floor(pWidth / 35);
+    for (let i = 0; i < coinCount; i++) {
+        coins.push({
+            x: nextX + 20 + i * 35,
+            y: nextY - 18,
+            radius: 7
+        });
+    }
+}
+
+function spawnBird() {
+    birds.push({
+        x: canvas.width + 30,
+        y: Math.random() * 100 + 80,
+        width: 34,
+        height: 26,
+        speed: Math.random() * 0.8 + 1.2,
+        wingFlap: 0
+    });
+}
+
+function spawnHazard() {
+    if (environmentMode === 'desert') {
+        const width = 22;
+        const height = Math.random() * 15 + 30;
+        hazards.push({
+            type: 'cactus',
+            x: canvas.width + 20,
+            y: GROUND_Y - height,
+            width: width,
+            height: height
+        });
+    } else if (environmentMode === 'ice') {
+        const width = 24;
+        const height = Math.random() * 10 + 25;
+        hazards.push({
+            type: 'icicle',
+            x: canvas.width + 20,
+            y: GROUND_Y - height,
+            width: width,
+            height: height
+        });
+    }
+}
+
+function spawnMedkit() {
+    let spawnY = GROUND_Y - 30;
+    if (platforms.length > 0) {
+        let p = platforms[Math.floor(Math.random() * platforms.length)];
+        spawnY = p.y - 25;
+    }
+    medkits.push({
+        x: canvas.width + 30,
+        y: spawnY,
+        width: 22,
+        height: 22
+    });
+}
+
+function spawnMonstersFromRight() {
+    const count = Math.floor(Math.random() * 2) + 1;
+    for (let i = 0; i < count; i++) {
+        const isBig = Math.random() < 0.35;
+        const offsetX = i * 45;
+        if (environmentMode === 'ice') {
+            if (isBig) {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 45,
+                    width: 40, height: 45, baseSpeed: Math.random() * 0.5 + 0.3,
+                    maxHp: 3, hp: 3, color: '#00d2d3', type: 'big'
+                });
+            } else {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 30,
+                    width: 25, height: 30, baseSpeed: Math.random() * 0.8 + 0.6,
+                    maxHp: 1, hp: 1, color: '#54a0ff', type: 'small'
+                });
+            }
+        } else if (environmentMode === 'lava') {
+            if (isBig) {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 45,
+                    width: 40, height: 45, baseSpeed: Math.random() * 0.5 + 0.3,
+                    maxHp: 3, hp: 3, color: '#ff4500', type: 'big'
+                });
+            } else {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 30,
+                    width: 25, height: 30, baseSpeed: Math.random() * 0.8 + 0.6,
+                    maxHp: 1, hp: 1, color: '#ff8c00', type: 'small'
+                });
+            }
+        } else if (environmentMode === 'desert') {
+            if (isBig) {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 45,
+                    width: 40, height: 45, baseSpeed: Math.random() * 0.5 + 0.3,
+                    maxHp: 3, hp: 3, color: '#d35400', type: 'big'
+                });
+            } else {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 30,
+                    width: 25, height: 30, baseSpeed: Math.random() * 0.8 + 0.6,
+                    maxHp: 1, hp: 1, color: '#f39c12', type: 'small'
+                });
+            }
+        } else {
+            if (isBig) {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 45,
+                    width: 40, height: 45, baseSpeed: Math.random() * 0.5 + 0.3,
+                    maxHp: 3, hp: 3, color: '#8a2be2', type: 'big'
+                });
+            } else {
+                monsters.push({
+                    x: canvas.width + 20 + offsetX, y: GROUND_Y - 30,
+                    width: 25, height: 30, baseSpeed: Math.random() * 0.8 + 0.6,
+                    maxHp: 1, hp: 1, color: '#00ff66', type: 'small'
+                });
+            }
+        }
+    }
+}
+
+function update() {
+    if (!isGameStarted || isGameOver) return;
+
+    if (shakeTimer > 0) shakeTimer--;
+
+    gameTimeTicks++;
+    const elapsedSeconds = Math.floor(gameTimeTicks / 60);
+    document.getElementById('time-state').innerText = `${elapsedSeconds}s`;
+
+    medkitSpawnTimer++;
+    if (medkitSpawnTimer >= 900) {
+        medkitSpawnTimer = 0;
+        spawnMedkit();
+    }
+
+    let isBlockedByPlatform = false;
+
+    if (player.shootCooldown > 0) player.shootCooldown--;
+    autoShoot();
+
+    player.vy += player.gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    if (player.y + player.height >= GROUND_Y) {
+        player.y = GROUND_Y - player.height;
+        player.vy = 0;
+        player.isGrounded = true;
+
+        if (environmentMode === 'lava') {
+            player.hp = 0;
+            document.getElementById('hp').innerText = 0;
+            playDamageSound();
+            stopBGM();
+            triggerScreenShake(18, 25);
+            endGame();
+            return;
+        }
+    }
+
+    platforms.forEach(p => {
+        if (player.x + player.width > p.x && player.x < p.x + p.width &&
+            player.y + player.height >= p.y && player.y + player.height <= p.y + 14 && player.vy >= 0) {
+            player.y = p.y - player.height;
+            player.vy = 0;
+            player.isGrounded = true;
+        }
+
+        if (player.x + player.width >= p.x && player.x < p.x &&
+            player.y + player.height > p.y + 5 && player.y < p.y + p.height) {
+            isBlockedByPlatform = true;
+            player.x = p.x - player.width;
+        }
+    });
+
+    currentWorldSpeed = isBlockedByPlatform ? SLOW_WORLD_SPEED : NORMAL_WORLD_SPEED;
+
+    bgOffset = (bgOffset + currentWorldSpeed * 0.3) % canvas.width;
+    groundOffset = (groundOffset + currentWorldSpeed) % 40;
+
+    if (player.x < 30) player.x = 30;
+    if (player.x > 400) player.x = 400;
+
+    const maxPlatforms = (environmentMode === 'desert' || environmentMode === 'ice') ? 2 : 6;
+    let rightmostX = platforms.length > 0 ? (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width) : 0;
+    
+    if (platforms.length < maxPlatforms && rightmostX < canvas.width + 100) {
+        spawnPlatformChain();
+    }
+
+    for (let i = platforms.length - 1; i >= 0; i--) {
+        let p = platforms[i];
+        p.x -= currentWorldSpeed;
+        if (p.x + p.width < -50) platforms.splice(i, 1);
+    }
+
+    for (let i = medkits.length - 1; i >= 0; i--) {
+        let mk = medkits[i];
+        mk.x -= currentWorldSpeed;
+
+        if (player.x < mk.x + mk.width && player.x + player.width > mk.x &&
+            player.y < mk.y + mk.height && player.y + player.height > mk.y) {
+            player.hp = Math.min(player.maxHp, player.hp + 20);
+            document.getElementById('hp').innerText = Math.ceil(player.hp);
+            playHealSound();
+            medkits.splice(i, 1);
+            continue;
+        }
+
+        if (mk.x + mk.width < -30) medkits.splice(i, 1);
+    }
+
+    if (environmentMode === 'desert' || environmentMode === 'ice') {
+        hazardSpawnTimer++;
+        if (hazardSpawnTimer > 150) {
+            hazardSpawnTimer = 0;
+            spawnHazard();
+        }
+
+        for (let i = hazards.length - 1; i >= 0; i--) {
+            let h = hazards[i];
+            h.x -= currentWorldSpeed;
+
+            if (player.x < h.x + h.width && player.x + player.width > h.x &&
+                player.y < h.y + h.height && player.y + player.height > h.y) {
+                player.hp -= 20;
+                document.getElementById('hp').innerText = Math.max(0, Math.ceil(player.hp));
+                playDamageSound();
+                triggerScreenShake(14, 20);
+                hazards.splice(i, 1);
+                if (player.hp <= 0) {
+                    stopBGM();
+                    endGame();
+                }
+                continue;
+            }
+
+            if (h.x + h.width < -30) hazards.splice(i, 1);
+        }
+    }
+
+    for (let i = coins.length - 1; i >= 0; i--) {
+        let c = coins[i];
+        c.x -= currentWorldSpeed;
+        const dist = Math.hypot((player.x + player.width / 2) - c.x, (player.y + player.height / 2) - c.y);
+        if (dist < c.radius + player.width / 2) {
+            coins.splice(i, 1);
+            addScore(1);
+            continue;
+        }
+        if (c.x < -20) coins.splice(i, 1);
+    }
+
+    birdSpawnTimer++;
+    if (birdSpawnTimer > 180) { birdSpawnTimer = 0; spawnBird(); }
+    for (let i = birds.length - 1; i >= 0; i--) {
+        let bird = birds[i];
+        bird.x -= (currentWorldSpeed + bird.speed);
+        bird.wingFlap += 0.2;
+
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            let b = bullets[j];
+            if (b.x > bird.x && b.x < bird.x + bird.width && b.y > bird.y && b.y < bird.y + bird.height) {
+                createHitParticles(b.x, b.y);
+                bullets.splice(j, 1);
+                birds.splice(i, 1);
+                addScore(10);
+                break;
+            }
+        }
+
+        if (player.x < bird.x + bird.width && player.x + player.width > bird.x &&
+            player.y < bird.y + bird.height && player.y + player.height > bird.y) {
+            player.hp = 0;
+            document.getElementById('hp').innerText = 0;
+            playDamageSound();
+            stopBGM();
+            triggerScreenShake(20, 25);
+            endGame();
+            return;
+        }
+
+        if (bird.x + bird.width < -50) birds.splice(i, 1);
+    }
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+            bullets.splice(i, 1);
+        }
+    }
+
+    monsterSpawnTimer++;
+    if (monsterSpawnTimer > 100) { monsterSpawnTimer = 0; spawnMonstersFromRight(); }
+
+    for (let i = monsters.length - 1; i >= 0; i--) {
+        let m = monsters[i];
+        m.x -= (currentWorldSpeed + m.baseSpeed);
+
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            let b = bullets[j];
+            if (b.x > m.x && b.x < m.x + m.width && b.y > m.y && b.y < m.y + m.height) {
+                createHitParticles(b.x, b.y);
+                m.hp -= b.damage;
+                bullets.splice(j, 1);
+                if (m.hp <= 0) {
+                    addScore(m.type === 'big' ? 3 : 1);
+                    monsters.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        if (player.x < m.x + m.width && player.x + player.width > m.x &&
+            player.y < m.y + m.height && player.y + player.height > m.y) {
+            let damageVal = (m.type === 'big') ? 25 : 15;
+            player.hp -= damageVal;
+            document.getElementById('hp').innerText = Math.max(0, Math.ceil(player.hp));
+            playDamageSound();
+            triggerScreenShake(16, 20);
+            monsters.splice(i, 1);
+            if (player.hp <= 0) {
+                stopBGM();
+                endGame();
+            }
+        }
+
+        if (m.x + m.width < -50) monsters.splice(i, 1);
+    }
+
+    for (let i = hitParticles.length - 1; i >= 0; i--) {
+        let p = hitParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        if (p.life <= 0) {
+            hitParticles.splice(i, 1);
+        }
+    }
+}
+
+function lerpColor(c1, c2, f) {
+    let r = Math.round(c1[0] + f * (c2[0] - c1[0]));
+    let g = Math.round(c1[1] + f * (c2[1] - c1[1]));
+    let b = Math.round(c1[2] + f * (c2[2] - c1[2]));
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function drawBackground() {
+    const cycleLength = 4800; 
+    const timeProgress = (gameTimeTicks % cycleLength) / cycleLength;
+
+    if (environmentMode === 'ice') {
+        let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#0f2027');
+        gradient.addColorStop(0.5, '#203a43');
+        gradient.addColorStop(1, '#2c5364');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        for (let i = 0; i < 30; i++) {
+            let snowX = (i * 130 + gameTimeTicks * 0.8) % canvas.width;
+            let snowY = (i * 90 + Math.sin(gameTimeTicks * 0.05 + i) * 15) % canvas.height;
+            ctx.beginPath();
+            ctx.arc(snowX, snowY, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = '#1e3799';
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#00d2d3';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+        return;
+    }
+
+    if (environmentMode === 'lava') {
+        if (isLavaBgLoaded) {
+            ctx.drawImage(lavaBgImage, 0, 0, canvas.width, canvas.height);
+        } else {
+            let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#2b0502');
+            gradient.addColorStop(1, '#ff1a00');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const lavaGlow = Math.sin(Date.now() / 120) * 0.2 + 0.8;
+        let lavaGradient = ctx.createLinearGradient(0, GROUND_Y - 40, 0, canvas.height);
+        lavaGradient.addColorStop(0, `rgba(255, 69, 0, ${lavaGlow})`);
+        lavaGradient.addColorStop(1, `rgba(139, 0, 0, 0.95)`);
+        
+        ctx.fillStyle = lavaGradient;
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+        return;
+    }
+
+    let skyTop, skyBottom, cloudColor;
+
+    if (environmentMode === 'desert') {
+        skyTop = '#f39c12';
+        skyBottom = '#f1c40f';
+        cloudColor = 'rgba(255, 235, 160, 0.5)';
+    } else {
+        // Bầu trời màu Dạ Lý Hương (Lilac)
+        const colorMorning = { top: [142, 122, 198], bottom: [213, 184, 236], cloud: [255, 255, 255] };
+        const colorNoon = { top: [122, 98, 178], bottom: [194, 161, 226], cloud: [255, 255, 255] };
+        const colorSunset = { top: [168, 110, 188], bottom: [232, 171, 214], cloud: [255, 190, 220] };
+        const colorNight = { top: [42, 28, 68], bottom: [74, 52, 108], cloud: [95, 75, 135] };
+
+        if (timeProgress < 0.25) {
+            let f = timeProgress / 0.25;
+            skyTop = lerpColor(colorMorning.top, colorNoon.top, f);
+            skyBottom = lerpColor(colorMorning.bottom, colorNoon.bottom, f);
+            cloudColor = lerpColor(colorMorning.cloud, colorNoon.cloud, f);
+        } else if (timeProgress < 0.5) {
+            let f = (timeProgress - 0.25) / 0.25;
+            skyTop = lerpColor(colorNoon.top, colorSunset.top, f);
+            skyBottom = lerpColor(colorNoon.bottom, colorSunset.bottom, f);
+            cloudColor = lerpColor(colorNoon.cloud, colorSunset.cloud, f);
+        } else if (timeProgress < 0.75) {
+            let f = (timeProgress - 0.5) / 0.25;
+            skyTop = lerpColor(colorSunset.top, colorNight.top, f);
+            skyBottom = lerpColor(colorSunset.bottom, colorNight.bottom, f);
+            cloudColor = lerpColor(colorSunset.cloud, colorNight.cloud, f);
+        } else {
+            let f = (timeProgress - 0.75) / 0.25;
+            skyTop = lerpColor(colorNight.top, colorMorning.top, f);
+            skyBottom = lerpColor(colorNight.bottom, colorMorning.bottom, f);
+            cloudColor = lerpColor(colorNight.cloud, colorMorning.cloud, f);
+        }
+    }
+
+    let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, skyTop);
+    gradient.addColorStop(1, skyBottom);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (environmentMode === 'desert') {
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.arc(680, 80, 35, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (timeProgress >= 0.65 && timeProgress <= 0.85) {
+        ctx.fillStyle = '#f1f2f6';
+        ctx.beginPath();
+        ctx.arc(680, 80, 25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = cloudColor;
+    for (let i = -1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(i * 300 - bgOffset + 150, 260, 100, 0, Math.PI * 2);
+        ctx.arc(i * 300 - bgOffset + 250, 280, 80, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (environmentMode === 'desert') {
+        ctx.fillStyle = '#e67e22';
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#d35400';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = '#2d1b4e';
+        ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+        ctx.strokeStyle = '#d8b4fe';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = environmentMode === 'desert' ? '#d35400' : '#4c1d95';
+    for (let x = -groundOffset; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, GROUND_Y);
+        ctx.lineTo(x - 20, canvas.height);
+        ctx.stroke();
+    }
+}
+
+function drawCactus(c) {
+    ctx.fillStyle = '#27ae60';
+    ctx.fillRect(c.x + 6, c.y, 10, c.height);
+
+    if (c.height > 25) {
+        ctx.fillRect(c.x, c.y + 10, 6, 4);
+        ctx.fillRect(c.x, c.y + 4, 4, 10);
+    }
+    if (c.height > 35) {
+        ctx.fillRect(c.x + 16, c.y + 15, 6, 4);
+        ctx.fillRect(c.x + 18, c.y + 8, 4, 11);
+    }
+}
+
+function drawIcicle(h) {
+    ctx.fillStyle = '#74b9ff';
+    ctx.beginPath();
+    ctx.moveTo(h.x, h.y + h.height);
+    ctx.lineTo(h.x + h.width / 2, h.y);
+    ctx.lineTo(h.x + h.width, h.y + h.height);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+}
+
+function drawMedkit(mk) {
+    ctx.fillStyle = '#ff4757';
+    ctx.beginPath();
+    let cx = mk.x + mk.width / 2;
+    let cy = mk.y + mk.height / 2;
+    ctx.arc(cx - 5, cy - 2, 6, 0, Math.PI * 2);
+    ctx.arc(cx + 5, cy - 2, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 11, cy);
+    ctx.lineTo(cx + 11, cy);
+    ctx.lineTo(cx, cy + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(mk.x, mk.y, mk.width, mk.height);
+}
+
+function drawPlayerHealthBar(runBounce) {
+    const barWidth = player.width + 10;
+    const barHeight = 6;
+    const barX = player.x - 5;
+    const barY = player.y + runBounce - 14;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    const hpPercent = Math.max(0, player.hp / player.maxHp);
+    
+    ctx.fillStyle = hpPercent > 0.5 ? '#00ff66' : (hpPercent > 0.25 ? '#f1c40f' : '#ff4b5c');
+    ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+}
+
+function drawChibiPlayer(x, y, runBounce) {
+    ctx.save();
+    ctx.translate(x, y + runBounce);
+
+    ctx.fillStyle = '#e0f7fa';
+    ctx.fillRect(4, 22, 26, 20);
+
+    ctx.fillStyle = '#81d4fa';
+    ctx.beginPath();
+    ctx.arc(17, 16, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(2, 10);
+    ctx.quadraticCurveTo(17, -2, 32, 10);
+    ctx.lineTo(30, 18);
+    ctx.quadraticCurveTo(17, 8, 4, 18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#fbc531';
+    ctx.beginPath();
+    ctx.ellipse(11, 16, 4.5, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(23, 16, 4.5, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(10, 13, 2, 3);
+    ctx.fillRect(22, 13, 2, 3);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-4, 20, 3, 3);
+    ctx.fillRect(32, 24, 2.5, 2.5);
+
+    ctx.restore();
+}
+
+function drawBird(bird) {
+    if (environmentMode === 'normal') {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(bird.x + bird.width, bird.y + 10);
+        ctx.lineTo(bird.x + bird.width + 8, bird.y + 13);
+        ctx.lineTo(bird.x + bird.width, bird.y + 16);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(bird.x + 22, bird.y + 5, 6, 6);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bird.x + 25, bird.y + 7, 2, 2);
+
+        const flapOffset = Math.sin(bird.wingFlap) * 6;
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 10, bird.y + 12);
+        ctx.lineTo(bird.x + 18, bird.y - 6 + flapOffset);
+        ctx.lineTo(bird.x + 24, bird.y + 12);
+        ctx.fill();
+    } else if (environmentMode === 'ice') {
+        ctx.fillStyle = '#0984e3';
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+        ctx.fillStyle = '#dfe6e9';
+        ctx.beginPath();
+        ctx.moveTo(bird.x, bird.y + 10);
+        ctx.lineTo(bird.x - 10, bird.y + 16);
+        ctx.lineTo(bird.x, bird.y + 20);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(bird.x + 4, bird.y + 3, 9, 8);
+        
+        ctx.fillStyle = '#74b9ff';
+        ctx.fillRect(bird.x + 4, bird.y + 5, 5, 5);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 2, bird.y + 2);
+        ctx.lineTo(bird.x + 14, bird.y + 8);
+        ctx.stroke();
+
+        const flapOffset = Math.sin(bird.wingFlap) * 8;
+        ctx.fillStyle = '#00cec9';
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 14, bird.y + 12);
+        ctx.lineTo(bird.x + 26, bird.y - 8 + flapOffset);
+        ctx.lineTo(bird.x + 32, bird.y + 12);
+        ctx.fill();
+    } else {
+        ctx.fillStyle = '#b30000';
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        ctx.moveTo(bird.x, bird.y + 10);
+        ctx.lineTo(bird.x - 10, bird.y + 16);
+        ctx.lineTo(bird.x, bird.y + 20);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(bird.x + 4, bird.y + 3, 9, 8);
+        
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(bird.x + 4, bird.y + 5, 5, 5);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 2, bird.y + 2);
+        ctx.lineTo(bird.x + 14, bird.y + 8);
+        ctx.stroke();
+
+        const flapOffset = Math.sin(bird.wingFlap) * 8;
+        ctx.fillStyle = '#800000';
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 14, bird.y + 12);
+        ctx.lineTo(bird.x + 26, bird.y - 8 + flapOffset);
+        ctx.lineTo(bird.x + 32, bird.y + 12);
+        ctx.fill();
+    }
+}
+
+function draw() {
+    ctx.save();
+
+    if (shakeTimer > 0) {
+        let offsetX = (Math.random() - 0.5) * shakeMagnitude;
+        let offsetY = (Math.random() - 0.5) * shakeMagnitude;
+        ctx.translate(offsetX, offsetY);
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+
+    platforms.forEach(p => {
+        ctx.fillStyle = environmentMode === 'ice' ? '#74b9ff' : (environmentMode === 'lava' ? '#47120a' : (environmentMode === 'desert' ? '#c27d38' : '#334155'));
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+        ctx.strokeStyle = environmentMode === 'ice' ? '#dfe6e9' : (environmentMode === 'lava' ? '#ff4500' : (environmentMode === 'desert' ? '#d35400' : '#94a3b8'));
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+    });
+
+    hazards.forEach(h => {
+        if (h.type === 'cactus') drawCactus(h);
+        else if (h.type === 'icicle') drawIcicle(h);
+    });
+
+    coins.forEach(c => {
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f39c12';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+
+    medkits.forEach(mk => drawMedkit(mk));
+
+    birds.forEach(bird => drawBird(bird));
+
+    const runBounce = (player.isGrounded && isGameStarted) ? Math.sin(Date.now() / 90) * 2 : 0;
+    
+    drawChibiPlayer(player.x, player.y, runBounce);
+
+    drawPlayerHealthBar(runBounce);
+
+    bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    hitParticles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    monsters.forEach(m => {
+        ctx.fillStyle = m.color;
+        ctx.fillRect(m.x, m.y, m.width, m.height);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(m.x + 4, m.y + 6, 5, 5);
+        ctx.fillRect(m.x + m.width - 9, m.y + 6, 5, 5);
+
+        const barWidth = m.width;
+        const barHeight = 5;
+        const barX = m.x;
+        const barY = m.y - 10;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        const hpPercent = Math.max(0, m.hp / m.maxHp);
+        ctx.fillStyle = '#ff4b5c';
+        ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+    });
+
+    ctx.restore();
+}
+
+function loop() {
+    update();
+    draw();
+    if (!isGameOver) requestAnimationFrame(loop);
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+    initAudio();
+    startGame();
+});
+document.getElementById('restart-btn').addEventListener('click', () => {
+    initAudio();
+    restartGame();
+});
+
+function startGame() {
+    isGameStarted = true;
+    document.getElementById('start-screen').style.display = 'none';
+    
+    platforms = [];
+    coins = [];
+    hazards = [];
+    medkits = [];
+    hitParticles = [];
+    gameTimeTicks = 0;
+    medkitSpawnTimer = 0;
+
+    platforms.push({ x: 50, y: GROUND_Y - 60, width: 200, height: 16 });
+
+    while (platforms.length < 6) {
+        spawnPlatformChain();
+    }
+}
+
+function endGame() {
+    isGameOver = true;
+    isMouseDown = false;
+
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('final-high-score').innerText = highScore;
+
+    const recordTag = document.getElementById('new-record-tag');
+    if (score >= highScore && score > 0) {
+        recordTag.style.display = 'block';
+    } else {
+        recordTag.style.display = 'none';
+    }
+
+    document.getElementById('game-over').style.display = 'flex';
+}
+
+function restartGame() {
+    player.hp = 100;
+    player.x = 100;
+    player.y = GROUND_Y - 120;
+    player.vx = 0;
+    player.vy = 0;
+    player.currentWeapon = 0;
+    shakeTimer = 0;
+
+    bullets = [];
+    monsters = [];
+    birds = [];
+    coins = [];
+    medkits = [];
+    platforms = [];
+    hazards = [];
+    hitParticles = [];
+    score = 0;
+    gameTimeTicks = 0;
+    medkitSpawnTimer = 0;
+    isGameOver = false;
+    isMouseDown = false;
+    isWeaponUnlocked = false;
+    environmentMode = 'normal';
+
+    const wBtn = document.getElementById('weapon-btn');
+    wBtn.classList.remove('unlocked');
+    wBtn.innerText = "🔒 Cần 1000đ để Mở Súng 5 Tia";
+
+    document.getElementById('hazard-alert').style.display = 'none';
+    document.getElementById('hp').innerText = player.hp;
+    document.getElementById('score').innerText = score;
+    document.getElementById('time-state').innerText = '0s';
+    document.getElementById('weapon-name').innerText = weapons[0].name;
+    document.getElementById('game-over').style.display = 'none';
+    
+    startGame();
+    loop();
+}
+
+loop();
+</script>
+
+</body>
+</html>
